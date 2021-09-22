@@ -13,7 +13,7 @@ from logging import debug, info, warn, error
 
 from memoizer import Memoizer, DBMemoizer
 
-import ConfigParser
+import configparser
 import imp
 import sys
 import optparse
@@ -120,7 +120,7 @@ def run_bans(c):
   info("Running full ban list; %d banned players..." % len(ban_list))
   ban_list.sort()
   del_list = list()
-  for key in BAN_TABLES.keys():
+  for key in list(BAN_TABLES.keys()):
     for table in BAN_TABLES[key]:
       del_list.append("DELETE FROM %s WHERE %s=%%s;" % (table, key))
   for query in del_list:
@@ -187,8 +187,7 @@ class Xlogline:
     self.offset = offset
     self.time = time
     if not time:
-      raise Exception, \
-          "Xlogline time missing from %s:%d: %s" % (filename, offset, xdict)
+      raise Exception("Xlogline time missing from %s:%d: %s" % (filename, offset, xdict))
     self.xdict = xdict
     self.processor = processor
 
@@ -483,7 +482,7 @@ def xlog_set_killer_group(d):
   d['ckiller'] = killer
 
 def xlog_milestone_fixup(d):
-  for field in [x for x in ['lv', 'uid'] if d.has_key(x)]:
+  for field in [x for x in ['lv', 'uid'] if x in d]:
     del d[field]
   verb = d['type']
   milestone = d['milestone']
@@ -519,7 +518,7 @@ def xlog_milestone_fixup(d):
 def xlog_match(ref, target):
   """Returns True if all keys in the given reference dictionary are
 associated with the same values in the target dictionary."""
-  for key in ref.keys():
+  for key in list(ref.keys()):
     if ref[key] != target.get(key):
       return False
   return True
@@ -569,7 +568,7 @@ def xlog_dict(logline, source_file=None):
     d['nrune'] = d.get('nrune') or d.get('urune')
     d['urune'] = d.get('urune') or d.get('nrune')
 
-  if d.has_key('milestone'):
+  if 'milestone' in d:
     xlog_milestone_fixup(d)
   xlog_set_killer_group(d)
 
@@ -678,7 +677,7 @@ MILE_DB_MAPPINGS = [
 LOGLINE_TO_DBFIELD = dict(LOG_DB_MAPPINGS)
 COMBINED_LOG_TO_DB = dict(LOG_DB_MAPPINGS + MILE_DB_MAPPINGS)
 
-DB_COPY_FIELDS = [x for x in COMBINED_LOG_TO_DB.keys()
+DB_COPY_FIELDS = [x for x in list(COMBINED_LOG_TO_DB.keys())
                   if x != COMBINED_LOG_TO_DB[x]]
 
 R_MONTH_FIX = re.compile(r'^(\d{4})(\d{2})(.*)')
@@ -714,7 +713,7 @@ def fix_crawl_date(date):
 query_times = { }
 def record_query_time(q, delta):
   global query_times
-  if not query_times.has_key(q):
+  if q not in query_times:
     query_times[q] = { 'n': 0, 'time': 0.0 }
   h = query_times[q]
   h['n'] += 1
@@ -744,8 +743,8 @@ class Query:
       end = time.time()
       record_query_time(self.query, end - start)
     except:
-      print("Failing query: " + self.query
-            + " args: " + self.values.__repr__())
+      print(("Failing query: " + self.query
+            + " args: " + self.values.__repr__()))
       cursor.fetchall() # still try to consume any results, to avoid errors
       raise
 
@@ -758,8 +757,8 @@ class Query:
       #print("Execute: %s, values: %s" % (self.query, repr(self.values)))
       cursor.execute(self.query, self.values)
     except:
-      print("Failing query: " + self.query
-            + " args: " + self.values.__repr__())
+      print(("Failing query: " + self.query
+            + " args: " + self.values.__repr__()))
       cursor.fetchall() # still try to consume any results, to avoid errors
       raise
 
@@ -782,27 +781,27 @@ class Query:
     self.execute(cursor)
     row = cursor.fetchone()
     if row is None:
-      raise exc, (msg or "No rows returned for %s" % self.query)
+      raise exc(msg or "No rows returned for %s" % self.query)
     return row[0]
 
   first = count
 
 def report_query_times():
   global query_times
-  print "--------------------------------------------------------"
-  print "QUERY STATS"
+  print("--------------------------------------------------------")
+  print("QUERY STATS")
   import stats
-  queries = query_times.items()
+  queries = list(query_times.items())
   def qsort(a, b):
     bt = b[1]['time']
     at = a[1]['time']
     return (at > bt and -1) or (at < bt and 1) or 0
   queries.sort(qsort)
   for q in queries:
-    print "--------------------------------------------------------------"
-    print ("Runs: %d, Time: %.3f, per query" %
-           (q[1]['n'], q[1]['time']))
-    print "Query: " + q[0]
+    print("--------------------------------------------------------------")
+    print(("Runs: %d, Time: %.3f, per query" %
+           (q[1]['n'], q[1]['time'])))
+    print("Query: " + q[0])
 
 def char(x):
   return x
@@ -865,11 +864,11 @@ dbfield_to_sqltype = {
 	}
 
 LOGF_SQLTYPE = dict([ (x, dbfield_to_sqltype[COMBINED_LOG_TO_DB[x]])
-                      for x in COMBINED_LOG_TO_DB.keys()
-                      if dbfield_to_sqltype.has_key(COMBINED_LOG_TO_DB[x])
+                      for x in list(COMBINED_LOG_TO_DB.keys())
+                      if COMBINED_LOG_TO_DB[x] in dbfield_to_sqltype
                       and (dbfield_to_sqltype[COMBINED_LOG_TO_DB[x]]
                            in [crawl_datetime, sql_int, bigint]) ])
-LOGF_SQLKEYS = LOGF_SQLTYPE.keys()
+LOGF_SQLKEYS = list(LOGF_SQLTYPE.keys())
 
 def is_selected(game):
   """Accept all games that match our version criterion."""
@@ -936,7 +935,7 @@ def apply_dbtypes(game):
       game[key] = LOGF_SQLTYPE[key](value)
 
   for key in DB_COPY_FIELDS:
-    if game.has_key(key):
+    if key in game:
       game[COMBINED_LOG_TO_DB[key]] = game[key]
 
   return game
@@ -948,7 +947,7 @@ def make_xlog_db_query(db_mappings, xdict, filename, offset, table):
     fields.append('source_file_offset')
     values.append(offset)
   for logkey, sqlkey in db_mappings:
-    if xdict.has_key(logkey):
+    if logkey in xdict:
       fields.append(sqlkey)
       values.append(xdict[logkey])
   return Query('INSERT INTO %s (%s) VALUES (%s);' %
@@ -956,7 +955,7 @@ def make_xlog_db_query(db_mappings, xdict, filename, offset, table):
                *values)
 
 def insert_xlog_db(cursor, xdict, filename, offset):
-  milestone = xdict.has_key('milestone')
+  milestone = 'milestone' in xdict
   db_mappings = milestone and MILE_DB_MAPPINGS or LOG_DB_MAPPINGS
   thingname = milestone and 'milestone' or 'logline'
   table = milestone and 'milestones' or 'games'
@@ -965,7 +964,7 @@ def insert_xlog_db(cursor, xdict, filename, offset):
                              save_offset and offset, table)
   try:
     query.execute(cursor)
-  except Exception, e:
+  except Exception as e:
     error("Error inserting %s %s (query: %s [%s]): %s"
           % (thingname, milestone, query.query, query.values, e))
     raise
@@ -983,7 +982,7 @@ def update_highscore_table(c, xdict, filename, offset, table, field, value):
                             table)
     try:
       iq.execute(c)
-    except Exception, e:
+    except Exception as e:
       error("Error inserting %s into %s (query: %s [%s]): %s"
             % (xdict, table, iq.query, iq.values, e))
       raise
@@ -1092,7 +1091,7 @@ def update_xlog_offset(c, filename, offset):
                       VALUES (%s, %s)''',
              filename, offset)
     if dbfile_offset(c, filename) != offset:
-      raise Exception, "Could not save logfile offset"
+      raise Exception("Could not save logfile offset")
     logfile_id.flush_key(filename)
 
 # should be stats.BulkDBCache, but circular import issues...
@@ -1180,8 +1179,8 @@ def scload():
     return
 
   crawl_utils.lock_or_die()
-  print "Populating db (one-off) with logfiles and milestones. " + \
-      "Running the scoresd.py daemon is preferred."
+  print("Populating db (one-off) with logfiles and milestones. " + \
+      "Running the scoresd.py daemon is preferred.")
 
   db = connect_db(password=OPT.mysql_pass, host=OPT.mysql_host)
   init_listeners(db)

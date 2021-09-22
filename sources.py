@@ -72,7 +72,7 @@ class Source (object):
     return self._cfg[key]
 
   def has_cfg(self, key):
-    return self._cfg.has_key(key)
+    return key in self._cfg
 
   def get_cfg(self, key):
     return self._cfg.get(key)

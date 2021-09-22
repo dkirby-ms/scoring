@@ -17,9 +17,9 @@ from logging import debug, info, warn, error
 # Handle input encoding of strings that are actually UTF-8.
 # Based on http://stackoverflow.com/a/25235213
 def handle_unicode(value):
-  if isinstance(value, basestring):
-    return unicode(value.decode('utf-8', errors='replace'))
-  return unicode(value)
+  if isinstance(value, str):
+    return str(value.decode('utf-8', errors='replace'))
+  return str(value)
 
 TEMPLATE_DIR = os.path.abspath('templates')
 MAKO_LOOKUP = mako.lookup.TemplateLookup(
@@ -37,7 +37,7 @@ def render(c, page, dest=None, pars=None):
 
   force_locale()
 
-  if not pars or not pars.has_key('quiet'):
+  if not pars or 'quiet' not in pars:
     info("Rendering " + page)
   target = os.path.join(config.SCORE_FILE_DIR, "%s.html" % (dest or page))
   t = MAKO_LOOKUP.get_template(page + '.mako')
@@ -51,7 +51,7 @@ def render(c, page, dest=None, pars=None):
       f.write( t.render( attributes = pars ) )
     finally:
       f.close()
-  except ScoringException, e:
+  except ScoringException as e:
     error("Error generating page %s: %s" % (page, e))
 
 def render_pages(c):
@@ -130,7 +130,7 @@ def tick_dirty():
                                               tick_amount, td.total_seconds())
 
   def tick_thing(things):
-    for p in things.keys():
+    for p in list(things.keys()):
       v = things[p]
       if v['dirtiness']:
         v['dirtiness'] += tick_amount
@@ -141,7 +141,7 @@ def tick_dirty():
 
 def fully_dirty():
   def dirty_thing(things):
-    for p in things.keys():
+    for p in list(things.keys()):
       v = things[p]
       v['dirtiness'] = v['threshold']
   dirty_thing(DIRTY_PAGES)
@@ -155,7 +155,7 @@ def init_dirty():
     DIRTY_PAGES[p[0]] = { 'dirtiness': 0, 'threshold': threshold }
 
 def dirty_player(p, increment = PLAYER_DIRTY_THRESHOLD + 1):
-  if not DIRTY_PLAYERS.has_key(p):
+  if p not in DIRTY_PLAYERS:
     DIRTY_PLAYERS[p] = { 'dirtiness': 0, 'threshold': PLAYER_DIRTY_THRESHOLD }
   DIRTY_PLAYERS[p]['dirtiness'] += increment
   debug("player_DIRTY: %s (+%d) => %d" % (p, increment, DIRTY_PLAYERS[p]['dirtiness']))
@@ -171,7 +171,7 @@ def dirty_pages(*pages):
     dirty_page(p)
 
 def mark_all_clean():
-  for v in DIRTY_PAGES.values():
+  for v in list(DIRTY_PAGES.values()):
     v['dirtiness'] = 0
   DIRTY_PLAYERS.clear()
 
@@ -200,7 +200,7 @@ def initialize_pages(c):
 
 def apply_to_dirty(c, things, fn, wipe=False):
   done = []
-  for p in things.keys():
+  for p in list(things.keys()):
     v = things[p]
     if v['dirtiness'] >= v['threshold']:
       fn(c, p)
