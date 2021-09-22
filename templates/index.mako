@@ -6,15 +6,9 @@
     <div class="page information">
       <%include file="toplink.mako"/>
       <div class="page_content">
-        <h2>DCSS Scoring Pages (stable and alpha versions)</h2>
+        <h2>DCSS@crawl.kirbytoso.xyz Scoring Pages</h2>
 
         <div class="content">
-
-          <p style="max-width: 500px">
-            To report problems with CAO scoring, please
-            <a href="https://github.com/crawl/scoring/issues/new?assignees=&labels=&template=cao-scoring-pages-bug-report.md&title=">
-              submit an issue on github</a>.
-          </p>
 
           <ul>
             <li><a href="overview.html">Scoring Overview</a></li>
